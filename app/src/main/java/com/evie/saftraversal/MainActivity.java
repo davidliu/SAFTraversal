@@ -18,6 +18,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
+import android.widget.Toast;
 
 import java.io.File;
 import java.util.ArrayDeque;
@@ -85,6 +86,7 @@ public class MainActivity extends AppCompatActivity {
         long time = then - now;
         Log.d(TAG, "file traversal done!");
         Log.d(TAG, fileCount.value + " files took " + time + "ms");
+        Toast.makeText(this, fileCount.value + " files took " + time + "ms", Toast.LENGTH_SHORT).show();
     }
 
     private void traverseFileTree(File curFile, Queue<File> queue, MutableInteger fileCount) {
@@ -104,14 +106,14 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == REQUEST_DOCUMENT_PROVIDER_TRAVERSAL && resultCode == RESULT_OK) {
-            traverseTree(data.getData());
+            traverseDocumentContractTree(data.getData());
         } else if (requestCode == REQUEST_DOCUMENT_FILE_TRAVERSAL && resultCode == RESULT_OK) {
             traverseDocumentTree(data.getData());
         }
     }
 
 
-    private void traverseTree(Uri uri) {
+    private void traverseDocumentContractTree(Uri uri) {
 
         long now = SystemClock.elapsedRealtime();
         String docId = DocumentsContract.getTreeDocumentId(uri);
@@ -137,16 +139,17 @@ public class MainActivity extends AppCompatActivity {
         MutableInteger fileCount = new MutableInteger(1);
         while (queue.size() > 0) {
             String currentDocId = queue.remove();
-            traverseTree(uri, currentDocId, queue, fileCount);
+            traverseDocumentContractTree(uri, currentDocId, queue, fileCount);
         }
 
         long then = SystemClock.elapsedRealtime();
         long time = then - now;
         Log.d(TAG, "SAF tree traversal done!");
         Log.d(TAG, fileCount.value + " documents took " + time + "ms");
+        Toast.makeText(this, fileCount.value + " files took " + time + "ms", Toast.LENGTH_SHORT).show();
     }
 
-    private void traverseTree(Uri rootUri, String documentId, Queue<String> queue, MutableInteger fileCount) {
+    private void traverseDocumentContractTree(Uri rootUri, String documentId, Queue<String> queue, MutableInteger fileCount) {
         Uri childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(rootUri,
                 documentId);
 
@@ -191,6 +194,7 @@ public class MainActivity extends AppCompatActivity {
         long time = then - now;
         Log.d(TAG, "DocumentFile tree traversal done!");
         Log.d(TAG, fileCount.value + " documents took " + time + "ms");
+        Toast.makeText(this, fileCount.value + " files took " + time + "ms", Toast.LENGTH_SHORT).show();
     }
 
     private void traverseDocumentTree(DocumentFile documentFile, Queue<DocumentFile> queue, MutableInteger fileCount) {
