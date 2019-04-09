@@ -6,3 +6,4 @@ Note: my phone does have some problems with freezing every 5 seconds, so times a
 
 * `java.io.File` traversal: ~1.9 seconds for 45719 files.
 * SAF traversal: ~15 seconds for 45719 files.
+* `DocumentFile.listFile()` traversal: a whopping **~203 seconds** for 245719 files.
