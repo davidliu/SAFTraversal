@@ -11,9 +11,9 @@ import android.os.Environment;
 import android.os.SystemClock;
 import android.provider.DocumentsContract;
 import android.support.annotation.Nullable;
-import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.provider.DocumentFile;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -26,6 +26,9 @@ import java.util.Queue;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "LOL";
+    private static final int REQUEST_DOCUMENT_PROVIDER_TRAVERSAL = 1;
+    private static final int REQUEST_DOCUMENT_FILE_TRAVERSAL = 2;
+
     ContentResolver contentResolver;
 
     @Override
@@ -34,15 +37,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
-        FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-                startActivityForResult(intent, 1);
-            }
-        });
 
         contentResolver = getContentResolver();
 
@@ -53,12 +47,26 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.test_file_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                traverseRoot();
+                traverseExternalStorageRoot();
+            }
+        });
+        findViewById(R.id.test_document_file_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+                startActivityForResult(intent, REQUEST_DOCUMENT_FILE_TRAVERSAL);
+            }
+        });
+        findViewById(R.id.test_document_provider_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+                startActivityForResult(intent, REQUEST_DOCUMENT_PROVIDER_TRAVERSAL);
             }
         });
     }
 
-    private void traverseRoot() {
+    private void traverseExternalStorageRoot() {
         long now = SystemClock.elapsedRealtime();
         File root = Environment.getExternalStorageDirectory();
         Log.d(TAG, "root file = " + root.getName());
@@ -95,10 +103,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if (requestCode == 1 && resultCode == RESULT_OK) {
+        if (requestCode == REQUEST_DOCUMENT_PROVIDER_TRAVERSAL && resultCode == RESULT_OK) {
             traverseTree(data.getData());
+        } else if (requestCode == REQUEST_DOCUMENT_FILE_TRAVERSAL && resultCode == RESULT_OK) {
+            traverseDocumentTree(data.getData());
         }
     }
+
 
     private void traverseTree(Uri uri) {
 
@@ -154,6 +165,47 @@ public class MainActivity extends AppCompatActivity {
             }
         } finally {
             closeQuietly(cursor);
+        }
+    }
+
+    private void traverseDocumentTree(Uri data) {
+
+        long now = SystemClock.elapsedRealtime();
+        DocumentFile file = DocumentFile.fromTreeUri(this, data);
+
+        String displayName = file.getName();
+        String mimeType = file.getType();
+        Log.d(TAG, "root=" + displayName + ", mime=" + mimeType);
+
+        MutableInteger fileCount = new MutableInteger(1);
+        Queue<DocumentFile> queue = new ArrayDeque<>();
+
+        queue.add(file);
+
+        while (queue.size() > 0) {
+            DocumentFile curFile = queue.remove();
+            traverseDocumentTree(curFile, queue, fileCount);
+        }
+
+        long then = SystemClock.elapsedRealtime();
+        long time = then - now;
+        Log.d(TAG, "DocumentFile tree traversal done!");
+        Log.d(TAG, fileCount.value + " documents took " + time + "ms");
+    }
+
+    private void traverseDocumentTree(DocumentFile documentFile, Queue<DocumentFile> queue, MutableInteger fileCount) {
+
+        DocumentFile[] children = documentFile.listFiles();
+
+        for (DocumentFile child : children) {
+            fileCount.increment();
+            String displayName = child.getName();
+            boolean isDirectory = child.isDirectory();
+            Log.d(TAG, "found child=" + displayName + ", isDir=" + isDirectory + ", parent=" + documentFile.getUri());
+
+            if (isDirectory) {
+                queue.add(child);
+            }
         }
     }
 
